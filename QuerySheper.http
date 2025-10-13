@@ -1,0 +1,53 @@
+@QuerySheper_HostAddress = http://localhost:5163
+
+# Main UI (Open in browser)
+GET {{QuerySheper_HostAddress}}/
+Accept: text/html
+
+###
+
+# Swagger UI (Open in browser)
+GET {{QuerySheper_HostAddress}}/swagger
+Accept: text/html
+
+###
+
+# Simple SQL Query Execution - Execute on ALL databases
+POST {{QuerySheper_HostAddress}}/api/simplequery/execute
+Content-Type: application/json
+
+"SELECT 1 as TestValue, 'Hello QuerySheper!' as Message, GETDATE() as CurrentTime"
+
+###
+
+# Test database versions
+POST {{QuerySheper_HostAddress}}/api/simplequery/execute
+Content-Type: application/json
+
+"SELECT @@VERSION as DatabaseVersion, DB_NAME() as DatabaseName"
+
+###
+
+# Count users (if Users table exists)
+POST {{QuerySheper_HostAddress}}/api/simplequery/execute
+Content-Type: application/json
+
+"SELECT COUNT(*) as UserCount FROM Users"
+
+###
+
+# Test with error (will show error handling)
+POST {{QuerySheper_HostAddress}}/api/simplequery/execute
+Content-Type: application/json
+
+"SELECT * FROM NonExistentTable"
+
+###
+
+# INSERT example (will show affected rows)
+POST {{QuerySheper_HostAddress}}/api/simplequery/execute
+Content-Type: application/json
+
+"SELECT 1 as Id, 'Test Insert' as Description, GETDATE() as CreatedAt"
+
+###

@@ -1,0 +1,33 @@
+{
+  "appName": "QuerySheper",
+  "version": "1.0.0",
+  "description": "Multi-Database Query System",
+  "apiBaseUrl": "/api/databasequery",
+  "features": {
+    "multiDatabase": true,
+    "fileExecution": true,
+    "parallelProcessing": true,
+    "errorHandling": true,
+    "realTimeResults": true
+  },
+  "supportedDatabases": [
+    "SqlServer",
+    "PostgreSQL", 
+    "MySQL",
+    "InMemory"
+  ],
+  "defaultSettings": {
+    "timeout": 30,
+    "continueOnError": true,
+    "autoRefresh": false,
+    "theme": "dark"
+  },
+  "endpoints": {
+    "databases": "/api/databasequery/databases",
+    "testConnections": "/api/databasequery/test-connections",
+    "execute": "/api/databasequery/execute",
+    "executeFromFile": "/api/databasequery/execute-from-file",
+    "sqlFiles": "/api/databasequery/sql-files",
+    "swagger": "/swagger"
+  }
+}

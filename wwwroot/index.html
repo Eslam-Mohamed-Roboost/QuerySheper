@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>أداة تشغيل الاستعلامات المتعددة - SQL Query Runner</title>
+    <meta name="description" content="أداة احترافية لتشغيل استعلامات SQL على عدة قواعد بيانات في وقت واحد">
+    <meta name="author" content="SQL Runner Tool">
+
+    <!-- Google Fonts - خط Tajawal العربي -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+
+    <!-- ربط ملف CSS -->
+    <link rel="stylesheet" href="sql-runner-styles.css">
+    <style>
+        /* Prevent layout break with wide/tall results */
+        .table-wrapper {
+            width: 100%;
+            overflow-x: auto;
+            overflow-y: hidden;
+            -webkit-overflow-scrolling: touch;
+        }
+        .results-table {
+            border-collapse: collapse;
+            width: 100%;
+            min-width: max-content; /* allow horizontal scroll when many columns */
+        }
+        .results-table th, .results-table td {
+            padding: 8px 10px;
+            border-bottom: 1px solid #e5e7eb;
+            white-space: nowrap; /* keep cells single-line; container will scroll */
+            max-width: 320px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .results-table thead th {
+            position: sticky;
+            top: 0;
+            background: #0d47a1; /* header background color */
+            color: #ffffff;       /* header text color */
+            z-index: 1;
+        }
+        /* Limit very tall result sections */
+        .accordion-content .table-wrapper {
+            max-height: 60vh;
+            overflow: auto;
+        }
+        /* Wrap long error/code blocks safely */
+        .code-block {
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+        @media (max-width: 768px) {
+            .results-table th, .results-table td { padding: 6px 8px; }
+        }
+
+        /* Spacing improvements */
+        .container { padding-inline: 16px; }
+        .main-content .container { padding-block: 16px; }
+        .content-grid { row-gap: 20px; }
+        .card { padding: 16px; margin-bottom: 16px; }
+        .form-group { margin-bottom: 14px; }
+        .button-group { margin-top: 12px; gap: 10px; display: flex; flex-wrap: wrap; }
+        .results-panel .card { margin-bottom: 16px; }
+        .results-section { margin-top: 12px; }
+        .section-title { margin: 0 0 12px 0; }
+        .status-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; }
+        .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; }
+        .summary-box, .status-box { padding: 12px; border-radius: 8px; }
+        .accordion-item { margin-bottom: 12px; }
+        .alert { margin-top: 10px; }
+        .table-wrapper { margin-top: 8px; }
+
+        /* Header typography enhancements */
+        .header-title { font-size: 2.25rem; line-height: 1.2; font-weight: 700; letter-spacing: .2px; }
+        .header-subtitle { font-size: 1.125rem; line-height: 1.6; color: #374151; margin-top: 6px; }
+        @media (max-width: 768px) {
+            .header-title { font-size: 1.75rem; }
+            .header-subtitle { font-size: 1rem; }
+        }
+        body.dark .header-subtitle { color: #94a3b8; }
+
+        /* Dark mode */
+        body.dark { background-color: #0b1220; color: #e5e7eb; }
+        body.dark .card { background-color: #0f172a; border-color: #334155; }
+        body.dark .header { background: linear-gradient(90deg, #0b1220 0%, #0f172a 100%) !important; border-bottom: 1px solid #334155; }
+        body.dark .header .header-title, body.dark .header .header-subtitle { color: #e5e7eb !important; }
+        body.dark .footer { background: #0b1220 !important; border-top: 1px solid #334155; }
+        body.dark .footer .footer-text, body.dark .footer .footer-note { color: #94a3b8 !important; }
+        body.dark .form-input, body.dark .form-select, body.dark .form-textarea { background: #0b1220; color: #e5e7eb; border-color: #334155; }
+        body.dark .section-title { color: #e5e7eb; }
+        body.dark .results-table th, body.dark .results-table td { border-bottom-color: #334155; }
+        body.dark .results-table thead th { background: #1e3a8a; color: #ffffff; }
+        body.dark .results-table { color: #e5e7eb; }
+        body.dark .results-table tbody td { background-color: #0b1220; }
+        body.dark .table-wrapper { border: 1px solid #334155; border-radius: 6px; }
+        body.dark .alert { background-color: #0f172a; border-color: #334155; color: #e5e7eb; }
+        body.dark .alert-warning { background-color: #1f2937; }
+        body.dark .alert-error { background-color: #331a1a; }
+        /* Results/Accordion in dark */
+        body.dark .results-panel .card { background-color: #0f172a; border-color: #334155; }
+        body.dark .accordion-item { background: #0f172a; border: 1px solid #334155; border-radius: 8px; }
+        body.dark .accordion-header { background: #0f172a; }
+        body.dark .accordion-header .accordion-title { color: #e5e7eb; }
+        body.dark .accordion-subtitle { color: #94a3b8; }
+        body.dark .accordion-content { background: #0b1220; }
+        /* Badges */
+        body.dark .badge { color: #e5e7eb; }
+        body.dark .badge-success { background: #14532d; }
+        body.dark .badge-error { background: #7f1d1d; }
+        body.dark .badge-warning { background: #78350f; }
+        body.dark .badge-pending { background: #334155; }
+        /* Status/Summary boxes */
+        body.dark .status-grid .status-box, body.dark .summary-grid .summary-box {
+            background: #0f172a;
+            border: 1px solid #334155;
+            color: #e5e7eb;
+        }
+        body.dark .summary-grid .summary-success { border-color: #14532d; }
+        body.dark .summary-grid .summary-error { border-color: #7f1d1d; }
+        body.dark .summary-grid .summary-warning { border-color: #78350f; }
+        /* Buttons in dark */
+        .btn { transition: background-color .2s ease, color .2s ease, border-color .2s ease; }
+        body.dark .btn.btn-primary { background: #2563eb; color: #fff; border-color: #1d4ed8; }
+        body.dark .btn.btn-primary:hover { background: #1d4ed8; }
+        body.dark .btn.btn-secondary { background: #111827; color: #e5e7eb; border-color: #374151; }
+        body.dark .btn.btn-secondary:hover { background: #0b1220; }
+        /* Misc */
+        body.dark a { color: #93c5fd; }
+        body.dark a:hover { color: #bfdbfe; }
+        .theme-toggle { margin-inline-start: auto; display: flex; align-items: center; gap: 8px; }
+        .theme-toggle-button { background: transparent; border: 1px solid #e5e7eb; color: #0b1220; padding: 10px 14px; border-radius: 9999px; cursor: pointer; }
+        #theme-icon { font-size: 1.4rem; line-height: 1; display: inline-block; }
+        .theme-toggle-button:hover { background: #f3f4f6; }
+        body.dark .theme-toggle-button { border-color: #334155; color: #e5e7eb; }
+        body.dark .theme-toggle-button:hover { background: #111827; }
+    </style>
+</head>
+<body>
+    <!--
+        Form method="POST" action="/api/run-query"
+        Backend يتلقى JSON: {
+            name: string,
+            dbType: 'sqlserver' | 'postgresql',
+            connectionStrings: string[],
+            query: string,
+            queryShaper: string,
+            targets: string[]
+        }
+    -->
+    <!-- Header - العنوان الرئيسي -->
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <div class="header-text">
+                    <h1 class="header-title"> Query Shaper - أداة تشغيل الاستعلامات المتعددة</h1>
+                    <p class="header-subtitle">تشغيل استعلامات SQL على عدة قواعد بيانات في وقت واحد</p>
+                </div>
+                <div class="theme-toggle">
+                    <button type="button" id="toggle-dark-btn" class="theme-toggle-button" aria-label="تبديل الوضع الداكن">
+                        <span id="theme-icon" aria-hidden="true">🌙</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content - القسم الرئيسي -->
+    <main class="main-content">
+        <div class="container">
+            <!--
+                Form Container
+                عند الإرسال، سيتم POST البيانات إلى /api/run-query
+                Backend سيعالج الطلب ويعيد النتائج
+            -->
+            <form id="query-form" method="POST" action="/api/run-query" class="content-grid">
+                <!-- Input Panel - لوحة الإدخال (الجانب الأيمن) -->
+                <section class="input-panel">
+                    <div class="card">
+                        <h2 class="section-title">⚙️ إعدادات الاستعلام</h2>
+
+                       
+
+                        <!-- Database Type - نوع قاعدة البيانات -->
+                        <div class="form-group">
+                            <label for="db-type" class="form-label">نوع قاعدة البيانات</label>
+                            <!--
+                                القيمة المختارة ستُرسل إلى Backend لتحديد نوع الاتصال
+                                Backend سيستخدم driver المناسب (MSSQL أو PostgreSQL)
+                            -->
+                            <select id="db-type"
+                                    name="dbType"
+                                    class="form-select"
+                                    aria-label="اختر نوع قاعدة البيانات">
+                                 <option value="postgresql">PostgreSQL</option>
+                                <option value="sqlserver">SQL Server</option>
+                            </select>
+                            <p class="form-hint">ℹ️ سيتم استخدام هذا النوع للاتصال بجميع القواعد المحددة</p>
+                        </div>
+
+                        <!-- Connection Strings - سلاسل الاتصال -->
+                        <div class="form-group">
+                            <label for="connection-strings" class="form-label">
+                                سلاسل الاتصال (Connection Strings)
+                                <span class="tooltip-container">
+                                    <span class="tooltip-trigger">ⓘ</span>
+                                    <span class="tooltip-text">
+                                        كل سطر يمثل اتصال بقاعدة بيانات واحدة. تأكد من صحة التنسيق حسب نوع القاعدة المختار.
+                                    </span>
+                                </span>
+                            </label>
+                            <!--
+                                كل سطر = قاعدة بيانات واحدة
+                                Backend سيقسم النص حسب السطور ويتصل بكل قاعدة على حدة
+                            -->
+                            <textarea dir="ltr" id="connection-strings"
+                                      name="connectionStrings"
+                                      rows="6"
+                                      class="form-textarea"
+                                      placeholder="مثال JSON (مفاتيح مسماة):
+{\n  &quot;sira-dev&quot;: &quot;Host=104.197.192.1;Port=5432;Database=Sira-Dev;Username=postgres_roboost;Password=Fvxgd7&amp;6Dzd&amp;RhwR;Timeout=300;Command Timeout=300;Keepalive&quot;,\n  &quot;sira-dev&quot;: &quot;Host=104.197.192.1;Port=5432;Database=Sira-Dev;Username=postgres_roboost;Password=Fvxgd7&amp;6Dzd&amp;RhwR;Timeout=300;Command Timeout=300;Keepalive&quot;\n}
+
+مثال (SQL Server):
+Server=localhost;Database=Sales;User Id=sa;Password=1234;
+Server=192.168.1.10;Database=Marketing;User Id=sa;Password=5678;
+
+مثال (PostgreSQL):
+Host=localhost;Port=5432;Database=Sales;User Id=postgres;Password=1234;
+Host=192.168.1.10;Port=5432;Database=Marketing;User Id=postgres;Password=5678;"
+                                      aria-label="أدخل سلاسل الاتصال، كل سطر قاعدة بيانات منفصلة"></textarea>
+                            <p class="form-hint">📝 كل سطر يمثل اتصال منفصل. يمكنك أيضاً استخدام تنسيق مسمى مثل: <code>Sales: Host=...;Database=Sales;...</code> أو إرسال كائن JSON بمفاتيح مسماة.</p>
+                        </div>
+
+                        <!-- SQL Query - الاستعلام -->
+                        <div class="form-group">
+                            <label for="sql-query" class="form-label">استعلام SQL</label>
+                            <!--
+                                الاستعلام سيُنفذ على جميع قواعد البيانات المحددة
+                                Backend سيحفظ النتائج من كل قاعدة بشكل منفصل
+                            -->
+                            <textarea id="sql-query"
+                                      name="query"
+                                      rows="8"
+                                      class="form-textarea code-input"
+                                      placeholder="SELECT * FROM Employees WHERE HireDate >= '2024-01-01';
+
+-- أو أي استعلام SQL آخر
+SELECT ProductName, SUM(Quantity) as TotalSales
+FROM Orders
+WHERE OrderDate >= '2024-01-01'
+GROUP BY ProductName
+ORDER BY TotalSales DESC;"
+                                aria-label="أدخل استعلام SQL"></textarea>
+                            <p class="form-hint">💡 سيتم تنفيذ هذا الاستعلام على جميع قواعد البيانات المحددة أدناه</p>
+                        </div>
+
+                      
+                      
+                        <!-- Action Buttons - أزرار الإجراءات -->
+                        <div class="button-group">
+                            <!--
+                                زر التشغيل - سيرسل Form إلى Backend
+                                Backend سينفذ الاستعلامات ويعيد النتائج
+                            -->
+                            <button type="submit"
+                                    class="btn btn-primary"
+                                    aria-label="تشغيل الاستعلام على القواعد المحددة">
+                                ▶️ تشغيل
+                            </button>
+
+                            <!--
+                                زر إعادة التعيين - يمسح جميع الحقول
+                                لا يتطلب Backend، يعمل بشكل افتراضي في HTML
+                            -->
+                            <button type="reset"
+                                    class="btn btn-secondary"
+                                    aria-label="إعادة تعيين جميع الحقول">
+                                🔄 إعادة تعيين
+                            </button>
+
+                            <!--
+                                زر حفظ كقالب - سيحفظ الإعدادات الحالية
+                                Backend سيخزن هذا القالب للاستخدام لاحقاً
+                            -->
+                            
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Results Panel - لوحة النتائج (الجانب الأيسر) -->
+                <section class="results-panel">
+                    <!-- Status Bar - شريط الحالة -->
+                    <div class="card" aria-live="polite">
+                        <h2 class="section-title">📊 حالة التنفيذ</h2>
+
+                        <div class="status-grid">
+                            <div class="status-box">
+                                <p class="status-label">القواعد المحددة</p>
+                                <p id="selected-count" class="status-value">0</p>
+                            </div>
+                            <div class="status-box">
+                                <p class="status-label">الحالة الإجمالية</p>
+                                <div class="status-indicator">
+                                    <span class="status-dot status-pending"></span>
+                                    <span id="overall-status-text" class="status-text">في انتظار التنفيذ</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="form-errors" class="alert alert-error" style="display:none">
+                            <h4 class="alert-title">⚠️ أخطاء في الإدخال</h4>
+                            <ul id="form-errors-list" style="margin: 6px 0 0 0; padding-inline-start: 18px;"></ul>
+                        </div>
+                        <div class="alert alert-warning">
+                            <p>⏳ سيتم عرض النتائج هنا بعد الضغط على "تشغيل"</p>
+                        </div>
+                    </div>
+
+                    <!-- Results are moved to bottom of the page -->
+
+                    <!-- Aggregated Results - النتائج المجمعة -->
+                    <div class="card">
+                        <h3 class="section-title">📈 ملخص النتائج</h3>
+
+                        <div class="summary-grid">
+                            <div class="summary-box summary-success">
+                                <p id="success-count" class="summary-value">0</p>
+                                <p class="summary-label">نجح</p>
+                            </div>
+                            <div class="summary-box summary-error">
+                                <p id="error-count" class="summary-value">0</p>
+                                <p class="summary-label">فشل</p>
+                            </div>
+
+                        </div>
+
+                        <div class="info-box">
+                            <p>
+                                💡 <strong>ملاحظة:</strong> يتم تنفيذ الاستعلامات بشكل متوازي على جميع القواعد.
+                                النتائج النهائية ستظهر عند اكتمال جميع العمليات.
+                            </p>
+                        </div>
+                    </div>
+                </section>
+            </form>
+        </div>
+    </main>
+
+    <!-- Bottom Results Area -->
+    <section class="results-panel" style="margin-top: 20px;">
+        <div class="container">
+            <div id="results-section-bottom" class="results-section">
+                <h2 class="section-title">📋 النتائج التفصيلية</h2>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer - التذييل -->
+    <footer class="footer">
+        <div class="container">
+            <p class="footer-text">© 2025 أداة تشغيل الاستعلامات المتعددة  | Query Shaper جميع الحقوق محفوظة</p>
+         </div>
+    </footer>
+<script>
+// اتصال الواجهة مع الـ API
+(function() {
+  // Theme init and toggle
+  const toggleBtn = document.getElementById('toggle-dark-btn');
+  const themeIcon = document.getElementById('theme-icon');
+  const saved = localStorage.getItem('qs-theme');
+  if (saved === 'dark') {
+      document.body.classList.add('dark');
+      if (themeIcon) themeIcon.textContent = '🌞';
+  }
+  if (toggleBtn) {
+      toggleBtn.addEventListener('click', function() {
+          const isDark = document.body.classList.toggle('dark');
+          localStorage.setItem('qs-theme', isDark ? 'dark' : 'light');
+          if (themeIcon) themeIcon.textContent = isDark ? '🌞' : '🌙';
+      });
+  }
+    const form = document.getElementById('query-form');
+  const resultsSection = document.getElementById('results-section-bottom');
+    const selectedCountEl = document.getElementById('selected-count');
+    const successCountEl = document.getElementById('success-count');
+    const errorCountEl = document.getElementById('error-count');
+    const pendingCountEl = document.getElementById('pending-count');
+    const overallStatusText = document.getElementById('overall-status-text');
+
+  function setOverallStatus(text, state) {
+        overallStatusText.textContent = text;
+        // يمكن لاحقاً تبديل ألوان/حالات حسب state
+    }
+
+  function showFormErrors(messages) {
+      const box = document.getElementById('form-errors');
+      const list = document.getElementById('form-errors-list');
+      if (!box || !list) return;
+      list.innerHTML = '';
+      messages.forEach(m => {
+          const li = document.createElement('li');
+          li.textContent = m;
+          list.appendChild(li);
+      });
+      box.style.display = messages.length ? '' : 'none';
+  }
+
+  function isLikelyValidPg(conn) {
+      const lowered = conn.toLowerCase();
+      return lowered.includes('host=') && lowered.includes('database=') && (lowered.includes('username=') || lowered.includes('user id='));
+  }
+
+  function isLikelyValidSqlServer(conn) {
+      const lowered = conn.toLowerCase();
+      return (lowered.includes('server=') || lowered.includes('data source=')) && lowered.includes('database=');
+  }
+
+  function buildTable(data, columnsOpt) {
+      const hasData = Array.isArray(data) && data.length > 0;
+      const colsFromData = hasData ? Object.keys(data[0]) : [];
+      const cols = (Array.isArray(columnsOpt) && columnsOpt.length) ? columnsOpt : colsFromData;
+
+      if (cols.length === 0) {
+          // No known columns and no data
+          return '<div class="alert alert-warning"><p>لا توجد بيانات</p></div>';
+      }
+
+      const limitedCols = cols.slice(0, 50); // cap columns to avoid overflow
+      const rows = hasData ? data.slice(0, 100) : [];
+      let thead = '<tr>' + limitedCols.map(c => `<th>${c}</th>`).join('') + '</tr>';
+      let tbody = rows.map(row => `<tr>${limitedCols.map(c => `<td>${row[c] == null ? '' : String(row[c])}</td>`).join('')}</tr>`).join('');
+      return `<div class="table-wrapper"><table class="results-table"><thead>${thead}</thead><tbody>${tbody}</tbody></table></div>`;
+  }
+
+    function resultBadge(success) {
+        if (success) {
+            return '<span class="badge badge-success"><span class="status-dot status-success"></span>نجح</span>';
+        }
+        return '<span class="badge badge-error"><span class="status-dot status-error"></span>فشل</span>';
+    }
+
+  function buildAccordionItem(index, item) {
+        const accordionId = `acc-${index+1}`;
+        const title = item.databaseName || `Database ${index+1}`;
+        const success = !!item.success;
+        const execTime = item.executionTime || '00:00:00';
+        const rowCount = typeof item.rowCount === 'number' ? item.rowCount : (item.data ? item.data.length : 0);
+        const subtitle = `الوقت: ${execTime} | السجلات: ${rowCount}`;
+        const errorBlock = !success && item.error ? `<div class="alert alert-error"><h4 class="alert-title">⚠️ خطأ:</h4><pre class="code-block code-error">${item.error}</pre></div>` : '';
+      const tableBlock = success ? (`<div class="result-section"><h4 class="result-title">النتيجة الجدولية:</h4>${buildTable(item.data, item.columns)}</div>`) : '';
+        return `
+        <div class="accordion-item">
+            <input type="checkbox" id="${accordionId}" class="accordion-checkbox" aria-label="توسيع نتائج ${title}">
+            <label for="${accordionId}" class="accordion-header">
+                <div class="accordion-header-content">
+                    <div class="accordion-title-row">
+                        <h3 class="accordion-title">${title}</h3>
+                        ${resultBadge(success)}
+                    </div>
+                    <p class="accordion-subtitle">${subtitle}</p>
+                </div>
+                <span class="accordion-icon" aria-hidden="true"></span>
+            </label>
+            <div class="accordion-content">
+                ${errorBlock}
+                ${tableBlock}
+            </div>
+        </div>`;
+    }
+
+    async function runQuery(payload) {
+        const res = await fetch('/api/simplequery/execute', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        if (!res.ok) {
+            const text = await res.text();
+            throw new Error(text || 'Request failed');
+        }
+        return res.json();
+    }
+
+  form.addEventListener('submit', async function(e) {
+        e.preventDefault();
+      setOverallStatus('جارٍ التنفيذ...', 'running');
+      showFormErrors([]);
+        successCountEl.textContent = '0';
+        errorCountEl.textContent = '0';
+        pendingCountEl.textContent = '0';
+        resultsSection.querySelectorAll('.accordion-item').forEach(n => n.remove());
+
+        const dbType = (document.getElementById('db-type').value || '').trim().toLowerCase();
+        const connectionsInput = (document.getElementById('connection-strings').value || '').trim();
+        const sqlQuery = (document.getElementById('sql-query').value || '').trim();
+
+      const errors = [];
+      if (!dbType) errors.push('يرجى اختيار نوع قاعدة البيانات.');
+      if (!sqlQuery) errors.push('يرجى إدخال استعلام SQL.');
+      if (!connectionsInput) {
+          errors.push('يرجى إدخال الاتصالات بصيغة JSON بالمفاتيح المسماة.');
+      } else {
+          const trimmed = connectionsInput.trim();
+          if (!(trimmed.startsWith('{') && trimmed.endsWith('}'))) {
+              errors.push('صيغة الاتصالات غير صحيحة: يجب أن تكون داخل {} ككائن JSON.');
+          } else {
+              try {
+                  const parsed = JSON.parse(trimmed);
+                  if (typeof parsed !== 'object' || Array.isArray(parsed)) {
+                      errors.push('صيغة الاتصالات يجب أن تكون كائن JSON (مفاتيح → اتصال).');
+                  } else {
+                      const entries = Object.entries(parsed);
+                      if (entries.length === 0) {
+                          errors.push('لا توجد أي اتصالات داخل الكائن JSON.');
+                      } else {
+                          const invalidLabels = entries.filter(([k, v]) => typeof v !== 'string' || !v.trim());
+                          if (invalidLabels.length) {
+                              errors.push('بعض القيم ليست سلاسل اتصال نصية صالحة.');
+                          } else {
+                              const connStrings = entries.map(([k, v]) => String(v));
+                              const invalidConn = connStrings.filter(cs => dbType === 'postgresql' ? !isLikelyValidPg(cs) : !isLikelyValidSqlServer(cs));
+                              if (invalidConn.length) {
+                                  errors.push('واحدة أو أكثر من سلاسل الاتصال لا تتوافق مع النوع المحدد.');
+                              }
+                          }
+                      }
+                  }
+              } catch {
+                  errors.push('JSON غير صالح في حقل الاتصالات.');
+              }
+          }
+
+          // Scroll to results at the bottom
+          const bottom = document.getElementById('results-section-bottom');
+          if (bottom) {
+              bottom.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }
+      }
+
+      if (errors.length) {
+          setOverallStatus('أكمل الحقول المطلوبة', 'error');
+          showFormErrors(errors);
+          return;
+      }
+
+      const payload = {
+            sqlQuery: sqlQuery,
+          databaseType: dbType || 'both',
+            customConnectionString: null,
+            multipleConnections: connectionsInput,
+            multipleConnectionsDbType: dbType || null
+        };
+
+        try {
+            const result = await runQuery(payload);
+            const total = result.totalDatabases || (Array.isArray(result.results) ? result.results.length : 0) || 0;
+            const successes = result.successfulDatabases ?? (Array.isArray(result.results) ? result.results.filter(r => r.success).length : 0);
+            const failures = result.failedDatabases ?? (Array.isArray(result.results) ? result.results.filter(r => !r.success).length : 0);
+
+            selectedCountEl.textContent = String(total);
+            successCountEl.textContent = String(successes);
+            errorCountEl.textContent = String(failures);
+            pendingCountEl.textContent = '0';
+
+            if (Array.isArray(result.results)) {
+                const itemsHtml = result.results.map((item, idx) => buildAccordionItem(idx, item)).join('');
+                resultsSection.insertAdjacentHTML('beforeend', itemsHtml);
+            }
+
+            setOverallStatus('اكتمل التنفيذ', 'done');
+        } catch (err) {
+            setOverallStatus('فشل الطلب', 'error');
+            const msg = (err && err.message) ? err.message : 'Unknown error';
+            const errorHtml = `
+            <div class="accordion-item">
+                <input type="checkbox" id="acc-error" class="accordion-checkbox" aria-label="توسيع رسالة الخطأ">
+                <label for="acc-error" class="accordion-header">
+                    <div class="accordion-header-content">
+                        <div class="accordion-title-row">
+                            <h3 class="accordion-title">خطأ في الطلب</h3>
+                            <span class="badge badge-error"><span class="status-dot status-error"></span>فشل</span>
+                        </div>
+                        <p class="accordion-subtitle">لم يتم تنفيذ الاستعلام</p>
+                    </div>
+                    <span class="accordion-icon" aria-hidden="true"></span>
+                </label>
+                <div class="accordion-content">
+                    <div class="alert alert-error"><pre class="code-block code-error">${msg}</pre></div>
+                </div>
+            </div>`;
+            resultsSection.insertAdjacentHTML('beforeend', errorHtml);
+        }
+    });
+})();
+</script>
+    </body>
+    </html>
