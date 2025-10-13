@@ -487,9 +487,10 @@ ORDER BY TotalSales DESC;"
         e.preventDefault();
       setOverallStatus('جارٍ التنفيذ...', 'running');
       showFormErrors([]);
-        successCountEl.textContent = '0';
-        errorCountEl.textContent = '0';
-        pendingCountEl.textContent = '0';
+        if (selectedCountEl) selectedCountEl.textContent = '0';
+        if (successCountEl) successCountEl.textContent = '0';
+        if (errorCountEl) errorCountEl.textContent = '0';
+        if (pendingCountEl) pendingCountEl.textContent = '0';
         resultsSection.querySelectorAll('.accordion-item').forEach(n => n.remove());
 
         const dbType = (document.getElementById('db-type').value || '').trim().toLowerCase();
@@ -559,10 +560,10 @@ ORDER BY TotalSales DESC;"
             const successes = result.successfulDatabases ?? (Array.isArray(result.results) ? result.results.filter(r => r.success).length : 0);
             const failures = result.failedDatabases ?? (Array.isArray(result.results) ? result.results.filter(r => !r.success).length : 0);
 
-            selectedCountEl.textContent = String(total);
-            successCountEl.textContent = String(successes);
-            errorCountEl.textContent = String(failures);
-            pendingCountEl.textContent = '0';
+            if (selectedCountEl) selectedCountEl.textContent = String(total);
+            if (successCountEl) successCountEl.textContent = String(successes);
+            if (errorCountEl) errorCountEl.textContent = String(failures);
+            if (pendingCountEl) pendingCountEl.textContent = '0';
 
             if (Array.isArray(result.results)) {
                 const itemsHtml = result.results.map((item, idx) => buildAccordionItem(idx, item)).join('');

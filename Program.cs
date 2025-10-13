@@ -2,6 +2,8 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddControllers();
+// Application/Infrastructure DI
+builder.Services.AddScoped<QuerySheper.Application.ISimpleQueryService, QuerySheper.Infrastructure.SimpleQueryService>();
 
 // Add Swagger/OpenAPI services
 builder.Services.AddEndpointsApiExplorer();
