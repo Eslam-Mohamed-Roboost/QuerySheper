@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using QuerySheper.Application;
 using QuerySheper.Controllers;
 using QuerySheper.Models;
+using QuerySheper.Persistence;
 
 namespace QuerySheper.Infrastructure
 {
