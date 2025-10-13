@@ -5,6 +5,7 @@ using QuerySheper.Models;
 using QuerySheper.Application;
 using System.Data;
 using System.Diagnostics;
+using QuerySheper.Persistence;
 
 namespace QuerySheper.Controllers
 {
@@ -107,11 +108,7 @@ namespace QuerySheper.Controllers
             }
         }
 
-        // Moved to Application service
-
-        // Moved to Application service
-
-        // Moved to Application service
+        
 
         private DbContext CreateDbContext(DatabaseConfig config)
         {
@@ -455,17 +452,5 @@ namespace QuerySheper.Controllers
         }
     }
 
-    // Simple DbContext for executing raw SQL queries
-    public class GenericDbContext : DbContext
-    {
-        public GenericDbContext(DbContextOptions options) : base(options)
-        {
-        }
-
-        protected override void OnModelCreating(ModelBuilder modelBuilder)
-        {
-            // Empty implementation - we're using this context for raw SQL queries only
-            base.OnModelCreating(modelBuilder);
-        }
-    }
+    
 }
