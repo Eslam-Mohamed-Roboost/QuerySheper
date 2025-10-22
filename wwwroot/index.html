@@ -522,9 +522,9 @@ ORDER BY TotalSales DESC;"
                           } else {
                               const connStrings = entries.map(([k, v]) => String(v));
                               const invalidConn = connStrings.filter(cs => dbType === 'postgresql' ? !isLikelyValidPg(cs) : !isLikelyValidSqlServer(cs));
-                              if (invalidConn.length) {
-                                  errors.push('واحدة أو أكثر من سلاسل الاتصال لا تتوافق مع النوع المحدد.');
-                              }
+                              //if (invalidConn.length) {
+                              //    errors.push('واحدة أو أكثر من سلاسل الاتصال لا تتوافق مع النوع المحدد.');
+                              //}
                           }
                       }
                   }
