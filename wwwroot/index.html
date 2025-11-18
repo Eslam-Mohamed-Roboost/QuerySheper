@@ -220,7 +220,8 @@
                                       rows="6"
                                       class="form-textarea"
                                       placeholder="مثال JSON (مفاتيح مسماة):
-{\n  &quot;sira-dev&quot;: &quot;Host=104.197.192.1;Port=5432;Database=Sira-Dev;Username=postgres_roboost;Password=Fvxgd7&amp;6Dzd&amp;RhwR;Timeout=300;Command Timeout=300;Keepalive&quot;,\n  &quot;sira-dev&quot;: &quot;Host=104.197.192.1;Port=5432;Database=Sira-Dev;Username=postgres_roboost;Password=Fvxgd7&amp;6Dzd&amp;RhwR;Timeout=300;Command Timeout=300;Keepalive&quot;\n}
+// يمكنك إضافة تعليقات تبدأ بـ // أو #
+{\n  &quot;sira-dev&quot;: &quot;Host=104.197.192.1;Port=5432;Database=Sira-Dev;Username=postgres_roboost;Password=Fvxgd7&amp;6Dzd&amp;RhwR;Timeout=300;Command Timeout=300;Keepalive&quot;,\n  &quot;sira-prod&quot;: &quot;Host=104.197.192.2;Port=5432;Database=Sira-Prod;Username=postgres_roboost;Password=Fvxgd7&amp;6Dzd&amp;RhwR;Timeout=300;Command Timeout=300;Keepalive&quot;\n}
 
 مثال (SQL Server):
 Server=localhost;Database=Sales;User Id=sa;Password=1234;
@@ -407,6 +408,20 @@ ORDER BY TotalSales DESC;"
       box.style.display = messages.length ? '' : 'none';
   }
 
+  function stripJsonComments(text) {
+      if (!text) return '';
+      return text
+          .split('\n')
+          .map(line => {
+              const trimmedLine = line.trimStart();
+              if (trimmedLine.startsWith('//') || trimmedLine.startsWith('#')) {
+                  return '';
+              }
+              return line;
+          })
+          .join('\n');
+  }
+
   function isLikelyValidPg(conn) {
       const lowered = conn.toLowerCase();
       return lowered.includes('host=') && lowered.includes('database=') && (lowered.includes('username=') || lowered.includes('user id='));
@@ -498,17 +513,20 @@ ORDER BY TotalSales DESC;"
         const sqlQuery = (document.getElementById('sql-query').value || '').trim();
 
       const errors = [];
+      let sanitizedConnectionsJson = '';
       if (!dbType) errors.push('يرجى اختيار نوع قاعدة البيانات.');
       if (!sqlQuery) errors.push('يرجى إدخال استعلام SQL.');
       if (!connectionsInput) {
           errors.push('يرجى إدخال الاتصالات بصيغة JSON بالمفاتيح المسماة.');
       } else {
           const trimmed = connectionsInput.trim();
-          if (!(trimmed.startsWith('{') && trimmed.endsWith('}'))) {
+          const withoutComments = stripJsonComments(trimmed);
+          const normalizedJson = withoutComments.trim();
+          if (!(normalizedJson.startsWith('{') && normalizedJson.endsWith('}'))) {
               errors.push('صيغة الاتصالات غير صحيحة: يجب أن تكون داخل {} ككائن JSON.');
           } else {
               try {
-                  const parsed = JSON.parse(trimmed);
+                  const parsed = JSON.parse(normalizedJson);
                   if (typeof parsed !== 'object' || Array.isArray(parsed)) {
                       errors.push('صيغة الاتصالات يجب أن تكون كائن JSON (مفاتيح → اتصال).');
                   } else {
@@ -525,6 +543,7 @@ ORDER BY TotalSales DESC;"
                               //if (invalidConn.length) {
                               //    errors.push('واحدة أو أكثر من سلاسل الاتصال لا تتوافق مع النوع المحدد.');
                               //}
+                              sanitizedConnectionsJson = normalizedJson;
                           }
                       }
                   }
@@ -546,11 +565,12 @@ ORDER BY TotalSales DESC;"
           return;
       }
 
+      const finalConnectionsPayload = sanitizedConnectionsJson || connectionsInput;
       const payload = {
             sqlQuery: sqlQuery,
           databaseType: dbType || 'both',
             customConnectionString: null,
-            multipleConnections: connectionsInput,
+            multipleConnections: finalConnectionsPayload,
             multipleConnectionsDbType: dbType || null
         };
 
